@@ -13,11 +13,11 @@
 # Описание
 <div style = "color: #555">
 
-Модуль предназначен для работы с датчиком силы тока и напряжения на базе чипа [INA219](https://github.com/Konkery/ModulePowerINA219/blob/main/res/INA219_Datasheet.pdf). Модуль является неотъемлемой частью фреймворка EcoLite. Датчик на баз чипа INA219 позволяет получить данные о напряжении, силе тока и мощности на цепи, проходящей через шунт датчика. Модуль работает по интерфейсу I2C. Модуль имеет следующие архитектурные решения фреймворка EcoLite:
+Модуль предназначен для работы с датчиком силы тока и напряжения на базе чипа [INA219](https://github.com/Konkery/ModulePowerINA219/blob/main/res/INA219_Datasheet.pdf). Модуль является неотъемлемой частью фреймворка EcoLite. Датчик на баз чипа INA219 позволяет получить данные о напряжении, силе тока и мощности. Модуль работает по интерфейсу I2C. Модуль имеет следующие архитектурные решения фреймворка EcoLite:
 - является потомком класса [ClassMiddleSensor](https://github.com/Konkery/ModuleSensorArchitecture/blob/main/README.md);
 - создаёт шину через глобальный объект [I2Cbus](https://github.com/Konkery/ModuleBaseI2CBus/blob/main/README.md).
 
-Количество каналов для снятия данных - 3.
+Количество каналов для снятия данных - 4.
 </div>
 
 ### Конструктор
@@ -28,17 +28,19 @@
 let sensor_props = {
     name: "INA219",
     type: "sensor",
-    channelNames: ['voltage', 'current', 'power'],
+    channelNames: ['vshunt', 'vbus', 'current', 'power'],
     typeInSignal: "analog",
     typeOutSignal: "digital",
-    quantityChannel: 3,
+    quantityChannel: 4,
     busType: [ "i2c" ],
 };
 const _opts = {
     bus: i2c_bus,
+    address: 0x40,
 }
 ```
-- <mark style="background-color: lightblue">bus</mark> - объект класса I2C, возвращаемый диспетчером I2C шин - [I2Cbus](https://github.com/Konkery/ModuleBaseI2CBus/blob/main/README.md).
+- <mark style="background-color: lightblue">bus</mark> - объект класса I2C, возвращаемый диспетчером I2C шин - [I2Cbus](https://github.com/Konkery/ModuleBaseI2CBus/blob/main/README.md);
+- <mark style="background-color: lightblue">address</mark> - адрес датчика на I2C шине. Нужен в случае присутствия нескольких датчиков INA219.
 </div>
 
 ### Поля
@@ -63,7 +65,7 @@ const _opts = {
 ### Возвращаемые данные
 <div style = "color: #555">
 
-Датчик предоставляет данные о напряжении тока в вольтах, силе тока в милиамперах и мощности в миливаттах на измеряемом участке цепи.
+Датчик предоставляет данные о напряжении тока в вольтах (V) на шине, и в миливольтах (mV) на шунте, силе тока в милиамперах (mA) и мощности в миливаттах (mW).
 </div>
 
 ### Примеры
@@ -79,18 +81,18 @@ const NumIs = require("ModuleAppMath.min.js");
 
 //Создание I2C шины
 let I2Cbus = new ClassI2CBus();
-let bus = I2Cbus.AddBus({sda: B9, scl: B8, bitrate: 400000}).IDbus;
+let bus = I2Cbus.AddBus({sda: A6, scl: A4, bitrate: 100000}).IDbus;
 
 //Настройка передаваемых объектов
 const powerClass = require('ClassPowerINA219.min.js');
-let opts = {bus: _bus, quantityChannel: 3};
+let opts = {bus: _bus, quantityChannel: 4};
 let sensor_props = {
     name: "INA219",
     type: "sensor",
-    channelNames: ['voltage', 'current', 'power'],
+    channelNames: ['vshunt', 'vbus', 'current', 'power'],
     typeInSignal: "digital",
     typeOutSignal: "digital",
-    quantityChannel: 3,
+    quantityChannel: 4,
     busType: [ "i2c" ],
     manufacturingData: {
         IDManufacturing: [
@@ -112,14 +114,16 @@ let ina219 = new powerClass(opts, sensor_props);
 const ch0 = ina219.GetChannel(0);
 const ch1 = ina219.GetChannel(1);
 const ch2 = ina219.GetChannel(2);
+const ch3 = ina219.GetChannel(2);
 
 //Создание каналов
 ch0.Start(1000);
 ch1.Start(1000);
 ch2.Start(1000);
+ch3.Start(1000);
 //Вывод данных
 setInterval(() => {
-  console.log(`Voltage: ${(ch0.Value).toFixed(2)} V    Current: ${(ch1.Value).toFixed(2)} mA    Power: ${(ch2.Value).toFixed(2)} mW`);
+    console.log(`Voltage Shunt: ${(ch0.Value).toFixed(2)} mV    Voltage Bus: ${(ch1.Value).toFixed(2)} V    Current: ${(ch2.Value).toFixed(2)} mA    Power: ${(ch3.Value).toFixed(2)} mW`);
 }, 1000);
 ```
 Вывод данных в консоль:

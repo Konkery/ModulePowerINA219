@@ -11,7 +11,7 @@ class ClassPowerINA219 extends ClassMiddleSensor {
     constructor(_opts, _sensor_props) {
         ClassMiddleSensor.apply(this, [_opts, _sensor_props]);
         this._Name = 'ClassPowerINA219'; //переопределяем имя типа
-		this._Sensor = require('BaseClassINA219.min.js').connect(_opts.bus);
+		this._Sensor = require('BaseClassINA219.min.js').connect(_opts.bus, undefined, _opts_address);
         this._MinPeriod = 250;
         this._UsedChannels = [];
         this._Interval;
@@ -37,9 +37,10 @@ class ClassPowerINA219 extends ClassMiddleSensor {
         if (!this._UsedChannels.includes(_num_channel)) this._UsedChannels.push(_num_channel); //номер канала попадает в список опрашиваемых каналов. Если интервал уже запущен с таким же периодои, то даже нет нужды его перезапускать 
         if (!this._Interval) {          //если в данный момент не ведется ни одного опроса
             this._Interval = setInterval(() => {
-                if (this._UsedChannels.includes(0)) this.Ch0_Value = this._Sensor.getBusMilliVolts() / 1000;
-                if (this._UsedChannels.includes(1)) this.Ch1_Value = this._Sensor.getBusMicroAmps() * 1000;
-                if (this._UsedChannels.includes(2)) this.Ch2_Value = this._Sensor.getBusMicroWatts() * 1000;
+                if (this._UsedChannels.includes(0)) this.Ch0_Value = this._Sensor.getShuntMicroVolts();
+                if (this._UsedChannels.includes(1)) this.Ch1_Value = this._Sensor.getBusMilliVolts() / 1000;
+                if (this._UsedChannels.includes(2)) this.Ch2_Value = this._Sensor.getBusMicroAmps() * 1000;
+                if (this._UsedChannels.includes(3)) this.Ch3_Value = this._Sensor.getBusMicroWatts() * 1000;
             }, period);
         }
     }
