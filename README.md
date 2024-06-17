@@ -73,57 +73,16 @@ const _opts = {
 
 Фрагмент кода для вывода данных о давлении и температуре в консоль раз в одну секунду. Предполагается, что все необходимые модули уже загружены в систему:
 ```js
-//Подключение необходимых модулей
-const ClassI2CBus = require("ClassBaseI2CBus.min.js");
-const err = require("ModuleAppError.min.js");
-const NumIs = require("ModuleAppMath.min.js");
-     NumIs.is(); //добавить функцию проверки целочисленных чисел в Number
+//Создание объекта датчика
+let ina = SensorManager.CreateDevice("07");
+ina[0].Start(1000);
+ina[1].Start(1000);
+ina[2].Start(1000);
+ina[3].Start(1000);
 
-//Создание I2C шины
-let I2Cbus = new ClassI2CBus();
-let bus = I2Cbus.AddBus({sda: A6, scl: A4, bitrate: 100000}).IDbus;
-
-//Настройка передаваемых объектов
-const powerClass = require('ClassPowerINA219.min.js');
-let opts = {bus: _bus, quantityChannel: 4};
-let sensor_props = {
-    name: "INA219",
-    type: "sensor",
-    channelNames: ['vshunt', 'vbus', 'current', 'power'],
-    typeInSignal: "digital",
-    typeOutSignal: "digital",
-    quantityChannel: 4,
-    busType: [ "i2c" ],
-    manufacturingData: {
-        IDManufacturing: [
-            {
-                "PowerMeter": "C3424"
-            }
-        ],
-        IDsupplier: [
-            {
-                "Sensory": "97856"
-            }
-        ],
-        HelpSens: "INA219 Power and Current sensor"
-    }
-};
-//Создание объекта класса
-let ina219 = new powerClass(opts, sensor_props);
-
-const ch0 = ina219.GetChannel(0);
-const ch1 = ina219.GetChannel(1);
-const ch2 = ina219.GetChannel(2);
-const ch3 = ina219.GetChannel(2);
-
-//Создание каналов
-ch0.Start(1000);
-ch1.Start(1000);
-ch2.Start(1000);
-ch3.Start(1000);
-//Вывод данных
+// Вывод данных
 setInterval(() => {
-    console.log(`Voltage Shunt: ${(ch0.Value).toFixed(2)} mV    Voltage Bus: ${(ch1.Value).toFixed(2)} V    Current: ${(ch2.Value).toFixed(2)} mA    Power: ${(ch3.Value).toFixed(2)} mW`);
+  console.log(`Voltage Shunt: ${(ina[0].Value).toFixed(4)} mV    Voltage Bus: ${(ina[1].Value).toFixed(4)} V    Current: ${(ina[2].Value).toFixed(4)} A    Power: ${(ina[3].Value).toFixed(4)} mW`);
 }, 1000);
 ```
 Вывод данных в консоль:

@@ -1,150 +1,214 @@
-/* Copyright (c) 2020 parasquid. See the file LICENSE for copying permission. */
+/**
+ * @class
+ * Базовый класс для работы с регистрами датчика INA219
+ */
+class BaseClassINA {
+  /**
+   * @constructor
+   */
+  constructor (bus, address, opts) {
+      this._i2c = bus;
+      this._address = address || 0x40;
+      this._opts = opts || {};
+      this.Init();
+  }
+  /**
+   * @method
+   * Чтение слова с шины
+   * @returns {Number} - двубайтное число без знака
+   */
+  ReadI2C(reg, bytes) {
+      if (bytes === undefined) {bytes = 2;}
+      this._i2c.writeTo(this._address, reg | 0x80);
+      const data = this._i2c.readFrom(this._address, bytes);
+      return data[0] << 8 | data[1];
+  }
+  /**
+   * @method
+   * Запись слова на шину
+   */
+  WriteI2C(reg, data) {
+      this._i2c.writeTo(this._address, [reg, data >> 8, data]);
+  }
+  /**
+   * @method
+   * Инициализация датчика, настройка конфигураций
+   */
+  Init() {
+      this.WriteI2C(0x00, 0x8000);// Ресет
+      if (this.ReadI2C(0x00, 2) !== 0x399F) {throw new Error("INA219 not found!");}// Кто я?
 
-/*
-Code was adapted from https://github.com/SV-Zanshin/INA
-and https://github.com/adafruit/Adafruit_INA219
-and https://github.com/espruino/EspruinoDocs/blob/master/devices/INA226.js
+      // Настроить максимальную силу тока и сопротивление на шунте
+      let maxCurrent = this._opts.maxCurrent || 3.2768;
+      this._opts.maxCurrent = maxCurrent;
 
-See also https://www.ti.com/lit/gpn/ina219 page 12
+      let rShunt = this._opts.rShunt || 0.1;
+      this._opts.rShunt= rShunt;
 
-Example usage:
+      this._opts.currentLSB = (maxCurrent * 3.0517578125 / 100000.0);
 
-```
-  I2C1.setup({ sda: A4, scl: A5 });
+      // Записать калибровочное значение
+      this.WriteI2C(0x05, (Math.round(0.04096 / (this._opts.currentLSB * rShunt))));
 
-  const ina219 = require("INA219").connect(I2C1);
+      // Конфигурация
+      let config = 0;
 
-  console.log(ina219.initDevice());
-  setInterval(function() {
-    console.log(ina219.getBusMilliVolts() / 1000 + 'V');
-    console.log(ina219.getBusMicroAmps() * 1000 + 'mA');
-    console.log(ina219.getBusMicroWatts() * 1000 + 'mW');
-    console.log('-----');
-  }, 1000);
-```
+      // Диапазон напряжения
+      let busVoltageRange = this._opts.busVoltageRange || 32;
+      this._opts.busVoltageRange = busVoltageRange;
+      if (busVoltageRange == 32) {config |= 0x2000;}
 
-connect() also accepts an options object for its second positional parameter.
-This allows you to customize the accuracy of the sensor depending on the shunt
-and the maximum current you will be using.
+      // Коэффициент передачи
+      let gain = this._opts.gain || 8;
+      this._opts.gain = gain;       
+      switch (gain) {
+          case 2:
+              config |= (1 << 11);
+              break;
+          case 4:
+              config |= (2 << 11);
+              break;
+          case 8:
+              config |= (3 << 11);
+              break;
+          default:
+              break;
+      }
 
-```
-  const defaultOptions = {
-    maximumExpectedCurrent: 3.2768, // in amps
-    rShunt: 0.1, // in ohms
-  };
-```
-*/
+      // Настройка АЦП шины
+      let busADC = this._opts.busADC || 12;
+      this._opts.busADC = busADC;
+      switch (busADC) {
+          case 10:
+              config |= (1 << 7);
+              break;
+          case 11:
+              config |= (2 << 7);
+              break;
+          case 12:
+              config |= (3 << 7);
+              break;
+          case 2:
+              config |= (9 << 7);
+              break;
+          case 4:
+              config |= (10 << 7);
+              break;
+          case 8:
+              config |= (11 << 7);
+              break;
+          case 16:
+              config |= (12 << 7);
+              break;
+          case 32:
+              config |= (13 << 7);
+              break;
+          case 64:
+              config |= (14 << 7);
+              break;
+          case 128:
+              config |= (15 << 7);
+              break;
+          default:
+              break;
+      }
 
-function INA219(i2c, options, deviceAddress) {
-  this.i2c = i2c;
-  this.options = options;
-  this.deviceAddress = deviceAddress;
-  this.currentLsb = options.maximumExpectedCurrent / 32768;
+      // Настройка АЦП шунта
+      let shuntADC = this._opts.shuntADC || 12;
+      this._opts.shuntADC = shuntADC;
+      switch (shuntADC) {
+          case 10:
+              config |= (1 << 3);
+              break;
+          case 11:
+              config |= (2 << 3);
+              break;
+          case 12:
+              config |= (3 << 3);
+              break;
+          case 2:
+              config |= (9 << 3);
+              break;
+          case 4:
+              config |= (10 << 3);
+              break;
+          case 8:
+              config |= (11 << 3);
+              break;
+          case 16:
+              config |= (12 << 3);
+              break;
+          case 32:
+              config |= (13 << 3);
+              break;
+          case 64:
+              config |= (14 << 3);
+              break;
+          case 128:
+              config |= (15 << 3);
+              break;
+          default:
+              break;
+      }
+
+      // Настройка режима
+      let mode = this._opts.mode || 7;
+      this._opts.mode = mode;
+      config |= mode;
+
+      this.WriteI2C(0x00, config);
+  }
+  /**
+   * @method
+   * Перевод слова из беззнакового числа в знаковое
+   * @returns {Number} - двубайтное число со знаком
+   */
+  UnsignedToSigned(val) {
+      return ((val & 32768) ? val - 65536 : val);
+  }
+  /**
+   * @method
+   * Вывод текущей конфигурации датчика
+   * @returns {Object} opts - объект, содержащий конфигурацию датчика
+   */
+  GetConfig() {
+      return this._opts;
+  }
+  /**
+   * @method
+   * Возвращение напряжения на шунте в миливольтах
+   * @returns {Float} - значение напряжения
+   */
+  GetShuntVoltage() {
+      return (this.UnsignedToSigned(this.ReadI2C(0x01, 2)) * 0.00001);
+  }
+  /**
+   * @method
+   * Возвращает нагрузочное напряжение в вольтах
+   * @returns {Float} - значение напряжения
+   */
+  GetBusVoltage() {
+      let data = this.ReadI2C(0x02, 2);
+      let flags = data & 0x03;
+      if (flags & 0x01) return -100;
+      return ((data >> 3) * 0.004);
+  }
+  /**
+   * @method
+   * Возвращает значение силы тока в амперах
+   * @returns {Float} - значение силы тока
+   */
+  GetPower() {
+      return ((this.ReadI2C(0x03, 2)) * this._opts.currentLSB * 20);
+  }
+  /**
+   * @method
+   * Возвращает значение мощности в миливаттах
+   * @returns {Float} - значение мощности
+   */
+  GetCurrent() {
+      return (this.UnsignedToSigned(this.ReadI2C(0x04, 2)) * this._opts.currentLSB);
+  }
 }
 
-/** see INA219 datasheet https://www.ti.com/lit/gpn/ina219 */
-var C = {
-  I2C_ADDRESS : 0x40,
-
-  CONFIGURATION_REGISTER : 0x00,
-  SHUNT_VOLTAGE_REGISTER : 0x01,
-  BUS_VOLTAGE_REGISTER : 0x02,
-  POWER_REGISTER : 0x03,
-  CURRENT_REGISTER : 0x04,
-  CALIBRATION_REGISTER : 0x05,
-
-  RESET_DEVICE : 0x8000,
-
-  BUS_VOLTAGE_LSB : 4,
-  SHUNT_VOLTAGE_LSB : 10,
-  POWER_LSB : 20,
-};
-
-INA219.prototype.readWord = function(address) {
-  this.i2c.writeTo(this.deviceAddress, address);
-
-  const returnData = this.i2c.readFrom(this.deviceAddress, 2);
-  return returnData[1] | returnData[0] << 8;
-};
-
-INA219.prototype.readSigned = function(address) {
-  const data = this.readWord(address);
-  return (data & 32768) ? data - 65536 : data;
-};
-
-INA219.prototype.writeWord = function(address, data) {
-  this.i2c.writeTo(this.deviceAddress, [address, data >> 8, data]);
-};
-
-/** initializes the device
- *
- *  initDevice() performs a quick check to see if the device at the I2C address
- *  is actually an INA219.
- *
- *  It will then calculate a calibration factor based on the resistor shunt and
- *  the maximum expected current (passed in as options in the constructor).
- *
- *  returns an object with the calibration factor
- */
-INA219.prototype.initDevice = function() {
-  const originalRegister = this.readWord(C.CONFIGURATION_REGISTER);
-  this.writeWord(C.CONFIGURATION_REGISTER, C.RESET_DEVICE);
-  const tempRegister = this.readWord(C.CONFIGURATION_REGISTER);
-  if (tempRegister !== 0x399F) throw new Error("Probably not an INA219");
-
-  const calibration = Math.round(0.04096 / (this.currentLsb * this.options.rShunt));
-  this.writeWord(C.CALIBRATION_REGISTER, calibration);
-  return({ calibrationFactor: calibration });
-};
-
-INA219.prototype.getBusRaw = function() {
-  const raw = this.readWord(C.BUS_VOLTAGE_REGISTER);
-  return raw >> 3;
-};
-
-/** returns the voltage measurement in millivolts */
-INA219.prototype.getBusMilliVolts = function() {
-  const busVoltage = this.getBusRaw();
-  return busVoltage * C.BUS_VOLTAGE_LSB;
-};
-
-INA219.prototype.getShuntRaw = function() {
-  const raw = this.readWord(C.SHUNT_VOLTAGE_REGISTER);
-  return raw >> 3;
-};
-
-/** returns the voltage drop across the shunt in micro volts */
-INA219.prototype.getShuntMicroVolts = function() {
-  const shuntVoltage = this.getShuntRaw();
-  return shuntVoltage * C.SHUNT_VOLTAGE_LSB;
-};
-
-/** returns the current measurement in microamps */
-INA219.prototype.getBusMicroAmps = function() {
-  const microAmps = this.readSigned(C.CURRENT_REGISTER);
-  return microAmps * this.currentLsb;
-};
-
-/** returns the power measurement in microwatts */
-INA219.prototype.getBusMicroWatts = function() {
-  const microWatts = this.readSigned(C.POWER_REGISTER);
-  return microWatts * this.currentLsb * C.POWER_LSB;
-};
-
-/** returns a new INA219 object with default values (if positional parameters
- *  were not provided)
- *
- *  the defaults are:
- *
- *  const defaultOptions = {
- *    maximumExpectedCurrent: 3.2768, // in amps
- *    rShunt: 0.1, // in ohms
- *  };
- */
-exports.connect = function (i2c, options, deviceAddress) {
-  const defaultOptions = {
-    maximumExpectedCurrent: 3.2768, // in amps
-    rShunt: 0.1, // in ohms
-  };
-  return new INA219(i2c, options || defaultOptions, deviceAddress || 0x40);
-};
+exports = BaseClassINA;
