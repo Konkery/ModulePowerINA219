@@ -185,6 +185,7 @@ class ClassPowerINA219 extends ClassSensor {
         this._Config = _opts.config || {};
         this._MinPeriod = 20;
         this._Interval;
+        this.Init();
     }
     /**
      * @method
@@ -197,6 +198,7 @@ class ClassPowerINA219 extends ClassSensor {
         this._Config.maxCurrent = this._Config.maxCurren || 3.2768;
         this._Config.rShunt = this._Config.rShunt || 0.1;
         this._Config.currentLSB = (this._Config.maxCurrent * 3.0517578125 / 100000.0);
+        console.log(this._Config);
         this._Sensor.Calibrate((Math.round(0.04096 / (this._Config.currentLSB * this._Config.rShunt))));
 
         this.SetBusVoltageRange(this._Config.busVoltageRange);
@@ -232,7 +234,7 @@ class ClassPowerINA219 extends ClassSensor {
     SetBusVoltageRange(_bvr) {
         const bvr_values = [16, 32];
         if (bvr_values.includes(_bvr)) {
-            this._Sensor.ConfigureBVR(_val);
+            this._Sensor.ConfigureBVR(_bvr);
         }
     }
     /**
@@ -243,7 +245,7 @@ class ClassPowerINA219 extends ClassSensor {
     SetGain(_gain) {
         const gain_values = [40, 80, 160, 320];
         if (gain_values.includes(_gain)) {
-            this._Sensor.ConfigureGain(_val);
+            this._Sensor.ConfigureGain(_gain);
         }
     }
     /**
@@ -254,7 +256,7 @@ class ClassPowerINA219 extends ClassSensor {
     SetBusADC(_badc) {
         const adc_values = [9, 10, 11, 12, 2, 4, 8, 16, 32, 64, 128];
         if (adc_values.includes(_badc)) {
-            this._Sensor.ConfigureBusADC(_val);
+            this._Sensor.ConfigureBusADC(_badc);
         }
     }
     /**
@@ -265,7 +267,7 @@ class ClassPowerINA219 extends ClassSensor {
     SetShuntADC(_sadc) {
         const adc_values = [9, 10, 11, 12, 2, 4, 8, 16, 32, 64, 128];
         if (adc_values.includes(_sadc)) {
-            this._Sensor.ConfigureShuntADC(_val);
+            this._Sensor.ConfigureShuntADC(_sadc);
         }
     }
     /**
@@ -276,7 +278,7 @@ class ClassPowerINA219 extends ClassSensor {
     SetSensorMode(_mode) {
         const modes = [0, 1, 2, 3, 4, 5, 6, 7];
         if (modes.includes(_mode)) {
-            this._Sensor.ConfigureMode(_val);
+            this._Sensor.ConfigureMode(_mode);
         }
     }
     /**
