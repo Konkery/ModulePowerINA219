@@ -198,7 +198,6 @@ class ClassPowerINA219 extends ClassSensor {
         this._Config.maxCurrent = this._Config.maxCurren || 3.2768;
         this._Config.rShunt = this._Config.rShunt || 0.1;
         this._Config.currentLSB = (this._Config.maxCurrent * 3.0517578125 / 100000.0);
-        console.log(this._Config);
         this._Sensor.Calibrate((Math.round(0.04096 / (this._Config.currentLSB * this._Config.rShunt))));
 
         this.SetBusVoltageRange(this._Config.busVoltageRange);
