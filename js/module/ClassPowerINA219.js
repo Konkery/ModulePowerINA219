@@ -200,6 +200,12 @@ class ClassPowerINA219 extends ClassSensor {
         this._Config.currentLSB = (this._Config.maxCurrent * 3.0517578125 / 100000.0);
         this._Sensor.Calibrate((Math.round(0.04096 / (this._Config.currentLSB * this._Config.rShunt))));
 
+        this._Config.busVoltageRange = this._Config.busVoltageRange || 32;
+        this._Config.gain = this._Config.gain || 320;
+        this._Config.busADC = this._Config.busADC || 12;
+        this._Config.shuntADC = this._Config.shuntADC || 12;
+        this._Config.mode = this._Config.mode || 7;
+
         this.SetBusVoltageRange(this._Config.busVoltageRange);
         this.SetGain(this._Config.gain);
         this.SetBusADC(this._Config.busADC);
@@ -234,6 +240,7 @@ class ClassPowerINA219 extends ClassSensor {
         const bvr_values = [16, 32];
         if (bvr_values.includes(_bvr)) {
             this._Sensor.ConfigureBVR(_bvr);
+            this._Config.busVoltageRange = _bvr;
         }
     }
     /**
@@ -245,6 +252,7 @@ class ClassPowerINA219 extends ClassSensor {
         const gain_values = [40, 80, 160, 320];
         if (gain_values.includes(_gain)) {
             this._Sensor.ConfigureGain(_gain);
+            this._Config.gain = _gain;
         }
     }
     /**
@@ -256,6 +264,7 @@ class ClassPowerINA219 extends ClassSensor {
         const adc_values = [9, 10, 11, 12, 2, 4, 8, 16, 32, 64, 128];
         if (adc_values.includes(_badc)) {
             this._Sensor.ConfigureBusADC(_badc);
+            this._Config.busADC = _badc;
         }
     }
     /**
@@ -267,6 +276,7 @@ class ClassPowerINA219 extends ClassSensor {
         const adc_values = [9, 10, 11, 12, 2, 4, 8, 16, 32, 64, 128];
         if (adc_values.includes(_sadc)) {
             this._Sensor.ConfigureShuntADC(_sadc);
+            this._Config.shuntADC = _sadc;
         }
     }
     /**
@@ -278,6 +288,7 @@ class ClassPowerINA219 extends ClassSensor {
         const modes = [0, 1, 2, 3, 4, 5, 6, 7];
         if (modes.includes(_mode)) {
             this._Sensor.ConfigureMode(_mode);
+            this._Config.mode = _mode;
         }
     }
     /**
