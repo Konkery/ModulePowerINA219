@@ -197,8 +197,6 @@ class ClassPowerINA219 extends ClassSensor {
 
         this._Config.maxCurrent = this._Config.maxCurrent || 3.2768;
         this._Config.rShunt = this._Config.rShunt || 0.1;
-        this._Config.currentLSB = (this._Config.maxCurrent * 3.0517578125 / 100000.0);
-        this._Sensor.Calibrate((Math.round(0.04096 / (this._Config.currentLSB * this._Config.rShunt))));
 
         this._Config.busVoltageRange = this._Config.busVoltageRange || 32;
         this._Config.gain = this._Config.gain || 320;
@@ -206,122 +204,86 @@ class ClassPowerINA219 extends ClassSensor {
         this._Config.shuntADC = this._Config.shuntADC || 12;
         this._Config.mode = this._Config.mode || 7;
 
-        this.SetBusVoltageRange(this._Config.busVoltageRange);
-        this.SetGain(this._Config.gain);
-        this.SetBusADC(this._Config.busADC);
-        this.SetShuntADC(this._Config.shuntADC);
-        this.SetSensorMode(this._Config.mode);
+        this.Calibrate(0, {amps: this._Config.maxCurrent, ohms: this._Config.rShunt});
+        this.Configure(0, this._Config);
     }
     /**
      * @method
-     * Устанавливает максимальную силу тока, перекалибровывая датчик
-     * @param {Number} _val     - значение максимальной силы тока в амперах
+     * Метод для калибровки датчика. Изменяет максимальное значение напряжения и сопротивление на шунте
+     * @param {Number} _num_channel     - номер канала датчика
+     * @param {Object} _clb             - объект с конфигурацией для калибровки
+     * @returns null                    - если был передан не объект, то возвращается пустота
      */
-    SetMaxCurrent(_amps) {
-        this._Config.maxCurrent = _amps || 3.2768;
-        this._Config.currentLSB = (this._Config.maxCurrent * 3.0517578125 / 100000.0);
-        this._Sensor.Calibrate((Math.round(0.04096 / (this._Config.currentLSB * this._Config.rShunt))));
-    }
-    /**
-     * @method
-     * Устанавливает значение сопротивления шунта, перекалибровывая датчик
-     * @param {Number} _val     - значение сопротивления в омах
-     */
-    SetShuntResist(_ohms) {
-        this._Config.rShunt = _ohms || 0.1;
-        this._Sensor.Calibrate((Math.round(0.04096 / (this._Config.currentLSB * this._Config.rShunt))));
-    }
-    /**
-     * @method
-     * Конфигурирует датчик, настраивает дапазон напряжения на шине
-     * @param {Number} _val        - значение диапазона в вольтах - 16 или 32
-     */
-    SetBusVoltageRange(_bvr) {
-        const bvr_values = [16, 32];
-        if (bvr_values.includes(_bvr)) {
-            this._Sensor.ConfigureBVR(_bvr);
-            this._Config.busVoltageRange = _bvr;
+    Calibrate(_num_channel, _clb) {
+        if (typeof _clb !== 'object') {return;}
+
+        // Значение максимальной силы тока в амперах
+        if (_clb.amps && typeof _clb.amps === 'number') {
+            this._Config.maxCurrent = _clb.amps || 3.2768;
+            this._Config.currentLSB = (this._Config.maxCurrent * 3.0517578125 / 100000.0);
+            this._Sensor.Calibrate((Math.round(0.04096 / (this._Config.currentLSB * this._Config.rShunt))));
+        }
+
+        // Значение сопротивления в омах
+        if (_clb.ohms && typeof _clb.ohms === 'number') {
+            this._Config.rShunt = _clb.ohms || 0.1;
+            this._Sensor.Calibrate((Math.round(0.04096 / (this._Config.currentLSB * this._Config.rShunt))));
         }
     }
     /**
      * @method
-     * Конфигурирует датчик, настраивает дапазон напряжения на шунте
-     * @param {Number} _val        - значение диапазона в миливольтах - 40, 80, 160 или 320
+     * Метод для настройки датчика. Изменяет диапазоны измерений, режимы работы сенсора и АЦП
+     * @param {Number} _num_channel     - номер канала датчика
+     * @param {Object} _cfg             - объект с конфигурацией 
+     * @returns null                    - если был передан не объект, то возвращается пустота
      */
-    SetGain(_gain) {
-        const gain_values = [40, 80, 160, 320];
-        if (gain_values.includes(_gain)) {
-            this._Sensor.ConfigureGain(_gain);
-            this._Config.gain = _gain;
+    Configure(_num_channel, _cfg) {
+        if (typeof _cfg !== 'object') {return;}
+
+        // Значение диапазона в вольтах - 16 или 32
+        if (_cfg.bvr) {
+            const bvr_values = [16, 32];
+            if (bvr_values.includes(_cfg.bvr)) {
+                this._Sensor.ConfigureBVR(_cfg.bvr);
+                this._Config.busVoltageRange = _cfg.bvr;
+            }
         }
-    }
-    /**
-     * @method
-     * Конфигурирует датчик, настраивает режим работы АЦП шины
-     * @param {Number} _val        - режим работы АЦП: разрядность или количество сэмплов
-     */
-    SetBusADC(_badc) {
-        const adc_values = [9, 10, 11, 12, 2, 4, 8, 16, 32, 64, 128];
-        if (adc_values.includes(_badc)) {
-            this._Sensor.ConfigureBusADC(_badc);
-            this._Config.busADC = _badc;
+
+        // Значение диапазона в миливольтах - 40, 80, 160 или 320
+        if (_cfg.gain) {
+            const gain_values = [40, 80, 160, 320];
+            if (gain_values.includes(_cfg.gain)) {
+                this._Sensor.ConfigureGain(_cfg.gain);
+                this._Config.gain = _cfg.gain;
+            }
         }
-    }
-    /**
-     * @method
-     * Конфигурирует датчик, настраивает режим работы АЦП шунта
-     * @param {Number} _val        - режим работы АЦП: разрядность или количество сэмплов
-     */
-    SetShuntADC(_sadc) {
-        const adc_values = [9, 10, 11, 12, 2, 4, 8, 16, 32, 64, 128];
-        if (adc_values.includes(_sadc)) {
-            this._Sensor.ConfigureShuntADC(_sadc);
-            this._Config.shuntADC = _sadc;
+
+        // Режим работы АЦП шины: разрядность или количество сэмплов
+        if (_cfg.badc) {
+            const adc_values = [9, 10, 11, 12, 2, 4, 8, 16, 32, 64, 128];
+            if (adc_values.includes(_cfg.badc)) {
+                this._Sensor.ConfigureBusADC(_cfg.badc);
+                this._Config.busADC = _cfg.badc;
+            }
         }
-    }
-    /**
-     * @method
-     * Конфигурирует датчик, настраивает режим работы датчика
-     * @param {Number} _val        - код режима - от 0 (выкл) до 7 (постоянное считывание)
-     */
-    SetSensorMode(_mode) {
-        const modes = [0, 1, 2, 3, 4, 5, 6, 7];
-        if (modes.includes(_mode)) {
-            this._Sensor.ConfigureMode(_mode);
-            this._Config.mode = _mode;
+
+        // Режим работы АЦП шунта: разрядность или количество сэмплов
+        if (_cfg.sadc) {
+            const adc_values = [9, 10, 11, 12, 2, 4, 8, 16, 32, 64, 128];
+            if (adc_values.includes(_cfg.sadc)) {
+                this._Sensor.ConfigureShuntADC(_cfg.sadc);
+                this._Config.shuntADC = _cfg.sadc;
+            }
         }
-    }
-    /**
-     * @method
-     * Возвращает напряжение на шунте в миливольтах
-     * @returns 
-     */
-    GetShuntVoltage() {
-        return this._Sensor.ReadShuntVoltageRaw() * 0.00001; 
-    }
-    /**
-     * @method
-     * Возвращает напряжение на шине в вольтах
-     * @returns 
-     */
-    GetBusVoltage() {
-        return this._Sensor.ReadBusVoltageRaw() * 0.004; 
-    }
-    /**
-     * @method
-     * Возвращает ток в амперах
-     * @returns 
-     */
-    GetCurrent() {
-        return this._Sensor.ReadCurrentRaw() * this._Config.currentLSB; 
-    }
-    /**
-     * @method
-     * Возвращает мощность в миниваттах
-     * @returns 
-     */
-    GetPower() {
-        return this._Sensor.ReadPowerRaw() * this._Config.currentLSB * 20; 
+
+        // Код режима - от 0 (выкл) до 7 (постоянное считывание)
+        if (_cfg.mode != null) {
+            const modes = [0, 1, 2, 3, 4, 5, 6, 7];
+            if (modes.includes(_cfg.mode)) {
+                this._Sensor.ConfigureMode(_cfg.mode);
+                this._Config.mode = _cfg.mode;
+            }
+        }
     }
     /**
      * @method
@@ -330,15 +292,14 @@ class ClassPowerINA219 extends ClassSensor {
      * @param {Number} _num_channel     - номер канала
      */
     Start(_num_channel, _period) {
-        let period = (typeof _period === 'number' & _period >= this._MinPeriod) ? _period    //частота сверяется с минимальной
-                 : this._MinPeriod;
-        this._ChStatus[_num_channel] = 1;
+        this._Channels[_num_channel].Status = 1;
         if (!this._Interval) {          //если в данный момент не ведется ни одного опроса
+            let period = (typeof _period === 'number' & _period >= this._MinPeriod) ? _period : this._MinPeriod;
             this._Interval = setInterval(() => {
-                if (this._ChStatus[0]) this.Ch0_Value = this.GetShuntVoltage();
-                if (this._ChStatus[1]) this.Ch1_Value = this.GetBusVoltage();
-                if (this._ChStatus[2]) this.Ch2_Value = this.GetCurrent();
-                if (this._ChStatus[3]) this.Ch3_Value = this.GetPower();
+                if (this._Channels[0].Status) this._Channels[0].Value = this._Sensor.ReadShuntVoltageRaw() * 0.00001;
+                if (this._Channels[1].Status) this._Channels[1].Value = this._Sensor.ReadBusVoltageRaw() * 0.004;
+                if (this._Channels[2].Status) this._Channels[2].Value = this._Sensor.ReadCurrentRaw() * this._Config.currentLSB;
+                if (this._Channels[3].Status) this._Channels[3].Value = this._Sensor.ReadPowerRaw() * this._Config.currentLSB * 20;
             }, period);
         }
     }
